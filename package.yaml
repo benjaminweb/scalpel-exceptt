@@ -1,0 +1,19 @@
+name: scalpel-exceptt
+version: 0.1.0.0
+synopsis: demonstrate how to yield error messages from scraper
+description: using monad transformer ExceptT with ScraperT
+author: Benjamin Weber <one@bwe.im>
+maintainer: Benjamin Weber <one@bwe.im>
+github: benjaminweb/scalpel-exceptt
+category: Other
+
+dependencies:
+  - base
+  - scalpel
+  - mtl
+
+library:
+  source-dirs: src
+
+executable:
+  main: Main.hs
