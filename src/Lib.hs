@@ -118,13 +118,28 @@ comments''' = throwError "Constant error"
 -- - how do we throw it only if there is no div with class "container"?
 
 -- step 5: let `comments` only throw error if there is no div with class "container"
+-- |
+--
+-- >>> runExcept $ scrapeStringLikeT exampleHtml comments''''
+-- Right (Just [TextComment "Sally" "Woo hoo!",TextComment "Susan" "WTF!?!"])
 comments'''' :: ScrapeWithExcept Text Text [Comment]
 comments'''' = do
-                containers <- chroots ("div" @: [hasClass "container"])
+                containers <- chroots ("div" @: [hasClass "container"]) textComment''
                 case containers of
-                    --[] -> throwError "No div of class `container`"
-                    --x -> return x
+                  [] -> throwError "No div of class container"
+                  x -> return x
 
+-- learnings:
+-- - we can case over the content of containers and raise error or return the values
+
+-- step 6: let's do that for textComment, too!
+textComment''' :: ScrapeWithExcept Text Text Comment
+textComment''' = do 
+  author <- text $ "span" @: [hasClass "author"]
+  --if author == Nothing then throwError "No field author found"
+  commentText <- text $ "div" @: [hasClass "text"]
+  return $ TextComment author commentText
+  
 -- sel :: (TagSoup.StringLike str, Monad m, Data.String.IsString a, Control.Monad.Error.Class.MonadError a) => Either a (ScraperT str m str)
 -- sel = (Right <$> text $ "div" @: [hasClass "text"]) <|> Left "could not find div class `text`"
 
