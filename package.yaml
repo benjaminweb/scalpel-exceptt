@@ -7,13 +7,18 @@ maintainer: Benjamin Weber <one@bwe.im>
 github: benjaminweb/scalpel-exceptt
 category: Other
 
+default-extensions:
+  - OverloadedStrings
+
 dependencies:
   - base
   - scalpel
   - mtl
+  - text
 
 library:
   source-dirs: src
 
 executable:
+  source-dirs: app
   main: Main.hs
