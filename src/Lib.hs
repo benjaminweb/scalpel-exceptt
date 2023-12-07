@@ -4,6 +4,8 @@ import Data.Text (Text)
 import Text.HTML.Scalpel
 import Data.Functor.Identity
 import Control.Monad.Error.Class
+import Control.Monad.Trans.Maybe
+import Control.Monad.Reader
 import Control.Applicative ((<|>), empty)
 import qualified Text.HTML.TagSoup as TagSoup
 import qualified Text.StringLike as TagSoup
@@ -135,8 +137,8 @@ comments'''' = do
 -- step 6: let's do that for textComment, too!
 textComment''' :: ScrapeWithExcept Text Text Comment
 textComment''' = do 
-  author <- text $ "span" @: [hasClass "author"]
-  --if author == Nothing then throwError "No field author found"
+  let authorSel = "span" @: [hasClass "author"]
+  author <- text authorSel >>= maybe (throwError "author not found") return
   commentText <- text $ "div" @: [hasClass "text"]
   return $ TextComment author commentText
   
