@@ -15,9 +15,12 @@ dependencies:
   - scalpel
   - mtl
   - text
+  - tagsoup
 
 library:
   source-dirs: src
+  exposed-modules:
+    - Lib
 
 executable:
   source-dirs: app
