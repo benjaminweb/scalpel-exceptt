@@ -99,8 +99,6 @@ textComment'' = do
 comments'' :: ScrapeWithError Text Text [Comment]
 comments'' = chroots ("div" @: [hasClass "container"]) textComment'' <|> throwError "div class 'container' not present"
 
--- learnings:
--- - we got Either working
 
 -- | Unpack `ScraperWithError Either Text (Maybe a)` to `Either Text a`.
 scrapeStringLikeOrError :: Text -> ScraperWithError Text Text a -> Either Text a
@@ -111,3 +109,33 @@ scrapeStringLikeOrError html scraper
   where
   result = scrapeStringLikeT html scraper
 
+-- learnings:
+-- - we got Either working
+-- - wherever an error is thrown, it cancels the execution and returns a Left
+-- - this Left is propagated through the top scraper
+-- - since we may have multiple errors, we would like to have an overview, so collect all errors
+
+-- step 4: let's use WriterT monad to collect all errors
+type ScraperWithErrors str e a = ScraperT str (Writer [e]) a
+
+scrapeStringOrErrors :: Text -> ScraperWithErrors Text Text a
+scrapeStringOrErrors html scraper = runWriter . scrapeStringLikeT
+
+textComment''' :: ScraperWithErrors Text Text Comment
+textComment''' = do
+  author <- text $ "span" @: [hasClass "author"] <|> logError "author field not present"
+  commentText <- text $ "div" @: [hasClass "text"] <|> logError "comment field not present"
+  return $ TextComment author commentText
+
+-- | Append error to WriterT.
+logError :: Text -> ScraperWithErrors Text Text a
+logError message = do
+    currentHtml <- html anySelector
+    tell ["Unknown comment type: " html]
+    empty
+
+comments''' :: ScraperWithErrors Text Text [Comment]
+comments''' = chroots ("div" @: [hasClass "container"]) textComment'' <|> logError "div class 'container' not present"
+
+-- learnings:
+-- - we collect all errors now and get an overview of all that way
