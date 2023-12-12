@@ -85,65 +85,29 @@ comments' = chroots ("div" @: [hasClass "container"]) textComment'
 
 -- step 3: let's use the ExceptT transformer to track exceptions.
 
-type ScrapeWithExcept str e a = ScraperT str (Except e) a
+type ScrapeWithError str e a = ScraperT str (Either e) a
 
-textComment'' :: ScrapeWithExcept Text Text Comment
+textComment'' :: ScrapeWithError Text Text Comment
 textComment'' = do
-  author <- text $ "span" @: [hasClass "author"]
-  commentText <- text $ "div" @: [hasClass "text"]
+  author <- text $ "span" @: [hasClass "author"] <|> throwError "author field not present"
+  commentText <- text $ "div" @: [hasClass "text"] <|> throwError "comment field not present"
   return $ TextComment author commentText
 
 -- |
---
--- >>> scrapeStringLikeT exampleHtml comments''
--- ExceptT (Identity (Right (Just [TextComment "Sally" "Woo hoo!",TextComment "Susan" "WTF!?!"])))
---
--- >>> runExcept $ scrapeStringLikeT exampleHtml comments''
--- Right (Just [TextComment "Sally" "Woo hoo!",TextComment "Susan" "WTF!?!"])
-comments'' :: ScrapeWithExcept Text Text [Comment]
-comments'' = chroots ("div" @: [hasClass "container"]) textComment''
+-- >>> scrapeStringLikeOrError exampleHtml comments''
+-- ???
+comments'' :: ScrapeWithError Text Text [Comment]
+comments'' = chroots ("div" @: [hasClass "container"]) textComment'' <|> throwError "div class 'container' not present"
 
 -- learnings:
--- - we got ExceptT working (its simple constructor Except = ExceptT Identity)
--- - we can unwrap it with runExcept
--- - we yet don't know how to let it throw errors
+-- - we got Either working
 
--- step 4: let `comments` throw error
---
--- >>> runExcept $ scrapeStringLikeT exampleHtml comments'''
--- Left "Constant error"
-comments''' :: ScrapeWithExcept Text Text [Comment]
-comments''' = throwError "Constant error"
+-- | Unpack `ScraperWithError Either Text (Maybe a)` to `Either Text a`.
+scrapeStringLikeOrError :: Text -> ScraperWithError Text Text a -> Either Text a
+scrapeStringLikeOrError html scraper
+    | Left error <- result = Left error
+    | Right Nothing <- result = Left "Unknown error"
+    | Right (Just a) <- result = Right a
+  where
+  result = scrapeStringLikeT html scraper
 
--- learnings:
--- - throwing that error in comments''' works
--- - how do we throw it only if there is no div with class "container"?
-
--- step 5: let `comments` only throw error if there is no div with class "container"
--- |
---
--- >>> runExcept $ scrapeStringLikeT exampleHtml comments''''
--- Right (Just [TextComment "Sally" "Woo hoo!",TextComment "Susan" "WTF!?!"])
-comments'''' :: ScrapeWithExcept Text Text [Comment]
-comments'''' = do
-                containers <- chroots ("div" @: [hasClass "container"]) textComment''
-                case containers of
-                  [] -> throwError "No div of class container"
-                  x -> return x
-
--- learnings:
--- - we can case over the content of containers and raise error or return the values
-
--- step 6: let's do that for textComment, too!
-textComment''' :: ScrapeWithExcept Text Text Comment
-textComment''' = do 
-  let authorSel = "span" @: [hasClass "author"]
-  author <- text authorSel >>= maybe (throwError "author not found") return
-  commentText <- text $ "div" @: [hasClass "text"]
-  return $ TextComment author commentText
-  
--- sel :: (TagSoup.StringLike str, Monad m, Data.String.IsString a, Control.Monad.Error.Class.MonadError a) => Either a (ScraperT str m str)
--- sel = (Right <$> text $ "div" @: [hasClass "text"]) <|> Left "could not find div class `text`"
-
---(<$?>) :: Text -> Scraper str a -> Scraper str b
---e <$?> scraper = Right <$> scraper >>= maybe (Left t) return
